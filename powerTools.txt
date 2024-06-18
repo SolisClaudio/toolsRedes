@@ -1,0 +1,46 @@
+/////configuracion basica
+ip address add {ip} dev {interfaz}
+ip link set {interfaz} up
+
+/////BRIDGE
+ip link add name {nombreBridge} type bridge
+ip link set {interfaz} master {nombreBridge}
+
+////VLAN
+ip link add link {interfaz} name {nombreVlan} type vlan id {ID}
+
+/////BOND	
+ip link add {nombreBond} type bond mode active-backup
+ip link set {nombreInterfaz} master {nombreBond}
+ip link set {nombreBond} up
+ip link set {nombreBond} master {nombreBridge}
+
+/////PROXY ARP
+echo 1 > /proc/sys/net/ipv4/conf/{interfaz}/proxy_arp 
+
+//routeo
+ip route add {ipRed} via {ipDest}
+
+echo "1	{nombreTabla}" >> /etc/iproute2/rt_tables
+ip route add {ipRed} via {ipDest} table {nombreTabla}
+ip route add {ipRed} dev {InterfazRed} scope link table {nombreTabla}
+ip rule add from {ipRed} table {nombreTabla} 
+
+//SNAT
+iptables -t nat -A POSTROUTING -o {interfaz} -j SNAT --to-source {ip} 
+
+//RIP
+/etc/init.d/quagga start
+vtysh
+configure terminal 
+exit
+interface {interfaz}
+ip address {Ip}
+no shutdown 
+exit
+ip route {red} {destino}
+router rip
+network {redRip}
+redistribute connected
+redistribute static
+
